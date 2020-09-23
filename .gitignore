@@ -23,3 +23,6 @@ tmp/
 .project
 .settings/
 /bin/
+/.nb-gradle/
+/target
+out/

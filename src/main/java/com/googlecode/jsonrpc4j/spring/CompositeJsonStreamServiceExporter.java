@@ -1,22 +1,20 @@
 package com.googlecode.jsonrpc4j.spring;
 
-import static com.googlecode.jsonrpc4j.Util.DEFAULT_HOSTNAME;
-
+import com.googlecode.jsonrpc4j.StreamServer;
 import org.springframework.beans.factory.DisposableBean;
 
-import com.googlecode.jsonrpc4j.StreamServer;
-
+import javax.net.ServerSocketFactory;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 
-import javax.net.ServerSocketFactory;
+import static com.googlecode.jsonrpc4j.Util.DEFAULT_HOSTNAME;
 
 /**
  * A stream service exporter that exports multiple
  * services as a single service.
  */
 @SuppressWarnings("unused")
-class CompositeJsonStreamServiceExporter extends AbstractCompositeJsonServiceExporter implements DisposableBean {
+public class CompositeJsonStreamServiceExporter extends AbstractCompositeJsonServiceExporter implements DisposableBean {
 
 	private static final int DEFAULT_MAX_THREADS = 50;
 	private static final int DEFAULT_PORT = 10420;
@@ -35,6 +33,7 @@ class CompositeJsonStreamServiceExporter extends AbstractCompositeJsonServiceExp
 	/**
 	 * {@inheritDoc}
 	 */
+	@Override
 	protected void exportService() throws Exception {
 		if (streamServer == null) {
 			if (serverSocketFactory == null) {

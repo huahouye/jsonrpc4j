@@ -1,5 +1,11 @@
 package com.googlecode.jsonrpc4j.spring.rest;
 
+import com.fasterxml.jackson.core.JsonEncoding;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.JavaType;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.springframework.http.HttpInputMessage;
 import org.springframework.http.HttpOutputMessage;
 import org.springframework.http.MediaType;
@@ -8,23 +14,18 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.http.converter.HttpMessageNotWritableException;
 import org.springframework.util.Assert;
 
-import com.fasterxml.jackson.core.JsonEncoding;
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.databind.JavaType;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 /**
  * JSON-RPC Message converter for Spring RestTemplate
  */
-@SuppressWarnings({ "WeakerAccess", "unused" })
+@SuppressWarnings({"WeakerAccess", "unused"})
 class MappingJacksonRPC2HttpMessageConverter extends AbstractHttpMessageConverter<Object> {
 
-	private static final Charset DEFAULT_CHARSET = Charset.forName("UTF-8");
-	private static final MediaType APPLICATION_JSON_RPC = new MediaType("application", "json-rpc", DEFAULT_CHARSET);
+	private static final Charset DEFAULT_CHARSET = StandardCharsets.UTF_8;
+	public static final MediaType APPLICATION_JSON_RPC = new MediaType("application", "json-rpc", DEFAULT_CHARSET);
 
 	private ObjectMapper objectMapper;
 
@@ -82,7 +83,7 @@ class MappingJacksonRPC2HttpMessageConverter extends AbstractHttpMessageConverte
 	 * syntactically invalid as a script so that it cannot be hijacked. This prefix does not affect the evaluation of
 	 * JSON, but if JSON validation is performed on the string, the prefix would need to be ignored.
 	 *
-	 * @param prefixJson whether the JSON should be prefixed 
+	 * @param prefixJson whether the JSON should be prefixed
 	 */
 	public void setPrefixJson(boolean prefixJson) {
 		this.prefixJson = prefixJson;
@@ -91,13 +92,19 @@ class MappingJacksonRPC2HttpMessageConverter extends AbstractHttpMessageConverte
 	@Override
 	public boolean canRead(Class<?> clazz, MediaType mediaType) {
 
-		if (!ObjectNode.class.isAssignableFrom(clazz)) { return false; }
+		if (!JsonNode.class.isAssignableFrom(clazz)) {
+			return false;
+		}
 
-		if (mediaType == null) { return true; }
+		if (mediaType == null) {
+			return true;
+		}
 
 		for (MediaType supportedMediaType : getSupportedMediaTypes()) {
 			// we can't read multipart
-			if (supportedMediaType.includes(mediaType)) { return true; }
+			if (supportedMediaType.includes(mediaType)) {
+				return true;
+			}
 		}
 		return false;
 
@@ -106,12 +113,18 @@ class MappingJacksonRPC2HttpMessageConverter extends AbstractHttpMessageConverte
 	@Override
 	public boolean canWrite(Class<?> clazz, MediaType mediaType) {
 
-		if (!ObjectNode.class.isAssignableFrom(clazz)) { return false; }
+		if (!ObjectNode.class.isAssignableFrom(clazz)) {
+			return false;
+		}
 
-		if (mediaType == null || MediaType.ALL.equals(mediaType)) { return true; }
+		if (mediaType == null || MediaType.ALL.equals(mediaType)) {
+			return true;
+		}
 
 		for (MediaType supportedMediaType : getSupportedMediaTypes()) {
-			if (supportedMediaType.isCompatibleWith(mediaType)) { return true; }
+			if (supportedMediaType.isCompatibleWith(mediaType)) {
+				return true;
+			}
 		}
 
 		return false;
@@ -139,9 +152,8 @@ class MappingJacksonRPC2HttpMessageConverter extends AbstractHttpMessageConverte
 	protected void writeInternal(Object object, HttpOutputMessage outputMessage)
 			throws IOException, HttpMessageNotWritableException {
 
-		JsonEncoding encoding = getJsonEncoding(outputMessage.getHeaders().getContentType());
-
-		JsonGenerator jsonGenerator = this.objectMapper.getFactory().createGenerator(outputMessage.getBody(), encoding);
+		final JsonEncoding encoding = getJsonEncoding(outputMessage.getHeaders().getContentType());
+		final JsonGenerator jsonGenerator = this.objectMapper.getFactory().createGenerator(outputMessage.getBody(), encoding);
 		try {
 			if (this.prefixJson) {
 				jsonGenerator.writeRaw("{} && ");
@@ -159,10 +171,12 @@ class MappingJacksonRPC2HttpMessageConverter extends AbstractHttpMessageConverte
 	 * @return the JSON encoding to use (never <code>null</code>)
 	 */
 	private JsonEncoding getJsonEncoding(MediaType contentType) {
-		if (contentType != null && contentType.getCharSet() != null) {
-			Charset charset = contentType.getCharSet();
+		if (contentType != null && contentType.getCharset() != null) {
+			Charset charset = contentType.getCharset();
 			for (JsonEncoding encoding : JsonEncoding.values()) {
-				if (charset.name().equals(encoding.getJavaName())) { return encoding; }
+				if (charset.name().equals(encoding.getJavaName())) {
+					return encoding;
+				}
 			}
 		}
 		return JsonEncoding.UTF8;

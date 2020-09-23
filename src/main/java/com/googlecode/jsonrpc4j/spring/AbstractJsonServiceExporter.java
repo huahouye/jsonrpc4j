@@ -1,25 +1,20 @@
 package com.googlecode.jsonrpc4j.spring;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.googlecode.jsonrpc4j.*;
 import org.springframework.beans.factory.BeanFactoryUtils;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.remoting.support.RemoteExporter;
 
-import com.googlecode.jsonrpc4j.ConvertedParameterTransformer;
-import com.googlecode.jsonrpc4j.ErrorResolver;
-import com.googlecode.jsonrpc4j.HttpStatusCodeProvider;
-import com.googlecode.jsonrpc4j.InvocationListener;
-import com.googlecode.jsonrpc4j.JsonRpcServer;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.List;
 
 /**
  * {@link RemoteExporter} that exports services using Json
  * according to the JSON-RPC proposal specified at:
  * <a href="http://groups.google.com/group/json-rpc">
  * http://groups.google.com/group/json-rpc</a>.
- *
  */
 @SuppressWarnings("unused")
 abstract class AbstractJsonServiceExporter extends RemoteExporter implements InitializingBean, ApplicationContextAware {
@@ -37,6 +32,7 @@ abstract class AbstractJsonServiceExporter extends RemoteExporter implements Ini
 	private HttpStatusCodeProvider httpStatusCodeProvider = null;
 	private ConvertedParameterTransformer convertedParameterTransformer = null;
 	private String contentType = null;
+	private List<JsonRpcInterceptor> interceptorList;
 
 	/**
 	 * {@inheritDoc}
@@ -78,12 +74,18 @@ abstract class AbstractJsonServiceExporter extends RemoteExporter implements Ini
 		if (contentType != null) {
 			jsonRpcServer.setContentType(contentType);
 		}
+		if (interceptorList != null) {
+			jsonRpcServer.setInterceptorList(interceptorList);
+		}
+
+		ReflectionUtil.clearCache();
 
 		exportService();
 	}
 
 	/**
 	 * Called when the service is ready to be exported.
+	 *
 	 * @throws Exception on error
 	 */
 	void exportService()
@@ -176,7 +178,6 @@ abstract class AbstractJsonServiceExporter extends RemoteExporter implements Ini
 	}
 
 	/**
-	 *
 	 * @param convertedParameterTransformer the convertedParameterTransformer to set
 	 */
 	public void setConvertedParameterTransformer(ConvertedParameterTransformer convertedParameterTransformer) {
@@ -191,4 +192,7 @@ abstract class AbstractJsonServiceExporter extends RemoteExporter implements Ini
 		this.contentType = contentType;
 	}
 
+	public void setInterceptorList(List<JsonRpcInterceptor> interceptorList) {
+		this.interceptorList = interceptorList;
+	}
 }

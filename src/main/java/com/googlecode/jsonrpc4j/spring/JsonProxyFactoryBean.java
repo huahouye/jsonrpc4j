@@ -1,5 +1,10 @@
 package com.googlecode.jsonrpc4j.spring;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.googlecode.jsonrpc4j.JsonRpcClient.RequestListener;
+import com.googlecode.jsonrpc4j.ExceptionResolver;
+import com.googlecode.jsonrpc4j.JsonRpcHttpClient;
+import com.googlecode.jsonrpc4j.ReflectionUtil;
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
 import org.springframework.aop.framework.ProxyFactory;
@@ -10,12 +15,8 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.remoting.support.UrlBasedRemoteAccessor;
 
-import com.googlecode.jsonrpc4j.JsonRpcClient.RequestListener;
-import com.googlecode.jsonrpc4j.JsonRpcHttpClient;
-import com.googlecode.jsonrpc4j.ReflectionUtil;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.SSLContext;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 import java.net.MalformedURLException;
@@ -23,16 +24,12 @@ import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 
-import javax.net.ssl.HostnameVerifier;
-import javax.net.ssl.SSLContext;
-
 /**
  * {@link FactoryBean} for creating a {@link UrlBasedRemoteAccessor}
  * (aka consumer) for accessing an HTTP based JSON-RPC service.
- *
  */
 @SuppressWarnings("unused")
-class JsonProxyFactoryBean extends UrlBasedRemoteAccessor implements MethodInterceptor, InitializingBean, FactoryBean<Object>, ApplicationContextAware {
+public class JsonProxyFactoryBean extends UrlBasedRemoteAccessor implements MethodInterceptor, InitializingBean, FactoryBean<Object>, ApplicationContextAware {
 
 	private Object proxyObject = null;
 	private RequestListener requestListener = null;
@@ -43,6 +40,8 @@ class JsonProxyFactoryBean extends UrlBasedRemoteAccessor implements MethodInter
 
 	private SSLContext sslContext = null;
 	private HostnameVerifier hostNameVerifier = null;
+	
+	private ExceptionResolver exceptionResolver; 
 
 	private ApplicationContext applicationContext;
 
@@ -55,32 +54,40 @@ class JsonProxyFactoryBean extends UrlBasedRemoteAccessor implements MethodInter
 		super.afterPropertiesSet();
 		proxyObject = ProxyFactory.getProxy(getServiceInterface(), this);
 
-		if (objectMapper == null && applicationContext != null && applicationContext.containsBean("objectMapper")) {
-			objectMapper = (ObjectMapper) applicationContext.getBean("objectMapper");
-		}
-		if (objectMapper == null && applicationContext != null) {
+		if (jsonRpcHttpClient==null) {
+			if (objectMapper == null && applicationContext != null && applicationContext.containsBean("objectMapper")) {
+				objectMapper = (ObjectMapper) applicationContext.getBean("objectMapper");
+			}
+			if (objectMapper == null && applicationContext != null) {
+				try {
+					objectMapper = BeanFactoryUtils.beanOfTypeIncludingAncestors(applicationContext, ObjectMapper.class);
+				} catch (Exception e) {
+					logger.debug(e);
+				}
+			}
+			if (objectMapper == null) {
+				objectMapper = new ObjectMapper();
+			}
+	
 			try {
-				objectMapper = BeanFactoryUtils.beanOfTypeIncludingAncestors(applicationContext, ObjectMapper.class);
-			} catch (Exception e) {
-				logger.debug(e);
+				jsonRpcHttpClient = new JsonRpcHttpClient(objectMapper, new URL(getServiceUrl()), extraHttpHeaders);
+				jsonRpcHttpClient.setRequestListener(requestListener);
+				jsonRpcHttpClient.setSslContext(sslContext);
+				jsonRpcHttpClient.setHostNameVerifier(hostNameVerifier);
+	
+				if (contentType != null) {
+					jsonRpcHttpClient.setContentType(contentType);
+				}
+				
+				if (exceptionResolver!=null) {
+					jsonRpcHttpClient.setExceptionResolver(exceptionResolver);
+				}
+			} catch (MalformedURLException mue) {
+				throw new RuntimeException(mue);
 			}
 		}
-		if (objectMapper == null) {
-			objectMapper = new ObjectMapper();
-		}
 
-		try {
-			jsonRpcHttpClient = new JsonRpcHttpClient(objectMapper, new URL(getServiceUrl()), extraHttpHeaders);
-			jsonRpcHttpClient.setRequestListener(requestListener);
-			jsonRpcHttpClient.setSslContext(sslContext);
-			jsonRpcHttpClient.setHostNameVerifier(hostNameVerifier);
-
-			if (contentType != null) {
-				jsonRpcHttpClient.setContentType(contentType);
-			}
-		} catch (MalformedURLException mue) {
-			throw new RuntimeException(mue);
-		}
+		ReflectionUtil.clearCache();
 	}
 
 	/**
@@ -90,7 +97,9 @@ class JsonProxyFactoryBean extends UrlBasedRemoteAccessor implements MethodInter
 	public Object invoke(MethodInvocation invocation)
 			throws Throwable {
 		Method method = invocation.getMethod();
-		if (method.getDeclaringClass() == Object.class && method.getName().equals("toString")) { return proxyObject.getClass().getName() + "@" + System.identityHashCode(proxyObject); }
+		if (method.getDeclaringClass() == Object.class && method.getName().equals("toString")) {
+			return proxyObject.getClass().getName() + "@" + System.identityHashCode(proxyObject);
+		}
 
 		Type retType = (invocation.getMethod().getGenericReturnType() != null) ? invocation.getMethod().getGenericReturnType() : invocation.getMethod().getReturnType();
 		Object arguments = ReflectionUtil.parseArguments(invocation.getMethod(), invocation.getArguments());
@@ -171,4 +180,14 @@ class JsonProxyFactoryBean extends UrlBasedRemoteAccessor implements MethodInter
 	public void setContentType(String contentType) {
 		this.contentType = contentType;
 	}
+
+	public void setJsonRpcHttpClient(JsonRpcHttpClient jsonRpcHttpClient) {
+		this.jsonRpcHttpClient = jsonRpcHttpClient;
+	}
+
+	public void setExceptionResolver(ExceptionResolver exceptionResolver) {
+		this.exceptionResolver = exceptionResolver;
+	}
+
+
 }

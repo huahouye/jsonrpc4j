@@ -4,13 +4,13 @@ This project aims to provide the facility to easily implement
 JSON-RPC for the java programming language.  jsonrpc4j uses the
 [Jackson][Jackson page] library to convert java
 objects to and from json objects (and other things related to
-JSON-RPC). 
+JSON-RPC).
 
-[![Javadoc](https://img.shields.io/badge/javadoc-OK-blue.svg)](http://briandilley.github.io/jsonrpc4j/javadoc/1.4.6/)
-[ ![Download](https://api.bintray.com/packages/gaborbernat/maven/com.github.briandilley.jsonrpc4j%3Ajsonrpc4j/images/download.svg) ](https://bintray.com/gaborbernat/maven/com.github.briandilley.jsonrpc4j%3Ajsonrpc4j/_latestVersion)
+[![Javadoc](https://img.shields.io/badge/javadoc-OK-blue.svg)](http://briandilley.github.io/jsonrpc4j/javadoc/1.5.0/)
+[![Download](https://img.shields.io/maven-central/v/com.github.briandilley.jsonrpc4j/jsonrpc4j.svg) ](https://repo1.maven.org/maven2/com/github/briandilley/jsonrpc4j/jsonrpc4j/1.5.3/)
 [![Travis CI](https://travis-ci.org/gaborbernat/jsonrpc4j.svg?branch=master)](https://travis-ci.org/gaborbernat/jsonrpc4j)
-[![GitHub commits](https://img.shields.io/github/commits-since/briandilley/jsonrpc4j/1.4.6.svg)](https://github.com/briandilley/jsonrpc4j/compare/1.4.6...master)
-[![Maintenance](https://img.shields.io/maintenance/yes/2016.svg)](https://github.com/briandilley/jsonrpc4j/commits/master)
+[![GitHub commits](https://img.shields.io/github/commits-since/briandilley/jsonrpc4j/1.5.3.svg)](https://github.com/briandilley/jsonrpc4j/compare/1.5.3...master)
+[![Maintenance](https://img.shields.io/maintenance/yes/2018.svg)](https://github.com/briandilley/jsonrpc4j/commits/master)
 
 ## Features Include:
   * Streaming server (`InputStream` \ `OutputStream`)
@@ -43,7 +43,7 @@ In `<dependencies>`:
 	<dependency>
 		<groupId>com.github.briandilley.jsonrpc4j</groupId>
 		<artifactId>jsonrpc4j</artifactId>
-		<version>1.4.6</version>
+		<version>1.5.3</version>
 	</dependency>
 
 ```
@@ -91,7 +91,7 @@ public class UserServiceImpl
         user.setUserName(userName);
         user.setFirstName(firstName);
         user.setPassword(password);
-        database.saveUser(user)
+        database.saveUser(user);
         return user;
     }
 
@@ -373,6 +373,8 @@ Of course, this is all possible in the Spring Framework as well:
         </property>
     </bean>
 ```
+	}
+
 
 ### `JsonRpcServer` settings explained
 The following settings apply to both the `JsonRpcServer` and `JsonServiceExporter`:
@@ -387,12 +389,13 @@ The following settings apply to both the `JsonRpcServer` and `JsonServiceExporte
 Methods are resolved in the following way, each step immediately short circuits the
 process when the available methods is 1 or less.
 
-  1. All methods with the same name as the request method are considered
-  2. If `allowLessParams` is disabled methods with more parameters than the request are removed
-  3. If `allowExtraParams` is disabled then methods with less parameters than the request are removed
-  4. If either of the two parameters above are enabled then methods with the lowest difference in parameter count from the request are kept
-  5. Parameters types are compared to the request parameters and the method(s) with the highest number of matching parameters is kept
-  6. If there are multiple methods remaining then the first of them are used
+  1. If a method has the @JsonRpcMethod annotation, then if the annotation value has the same name as the request method, it is considered.  If the annotation has `required` set to `true`, then the Java method name is not considered.
+  2. Otherwise, all methods with the same name as the request method are considered.
+  3. If `allowLessParams` is disabled methods with more parameters than the request are removed
+  4. If `allowExtraParams` is disabled then methods with less parameters than the request are removed
+  5. If either of the two parameters above are enabled then methods with the lowest difference in parameter count from the request are kept
+  6. Parameters types are compared to the request parameters and the method(s) with the highest number of matching parameters is kept
+  7. If there are multiple methods remaining then the first of them are used
 
 jsonrpc4j's method resolution allows for overloaded methods _sometimes_.  Primitives are
 easily resolved from json to java.  But resolution between other objects are not possible.
@@ -436,7 +439,8 @@ and `UserObjectEx` Plain Old Java Objects.
 #### Custom method names
 
 In some instances, you may need to expose a JsonRpc method that is not a valid Java method name.
-In this case, use the annotation @JsonRpcMethod on the service method.
+In this case, use the annotation @JsonRpcMethod on the service method.  You may also use this annotation
+to disambiguate overloaded methods by setting the `required` property on the annotation to `true`.
 
 ```java
 @JsonRpcService("/jsonrpc")
